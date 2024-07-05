@@ -18,12 +18,12 @@ images:
     ref: image:${{ flow.project_id }}/api
     context: ${{ flow.workspace }}/api
     dockerfile: ${{ flow.workspace }}/api/Dockerfile
-    build_preset: gpu-small
+    build_preset: cpu-8-20
   web:
     ref: image:${{ flow.project_id }}/web
     context: ${{ flow.workspace }}/web
     dockerfile: ${{ flow.workspace }}/web/Dockerfile
-    build_preset: gpu-small
+    build_preset: cpu-8-20
 
 volumes:
   data:
@@ -43,6 +43,9 @@ volumes:
     remote: storage:$[[ flow.project_id ]]/nginx_cfg
     mount: /tmp/nginx_cfg/
     local: docker/nginx/
+  cache:
+    remote: storage:private_gpt/cache
+    mount: /root/.cache/huggingface
 
 jobs:
   api:
@@ -109,7 +112,7 @@ jobs:
     image: ${{ images.api.ref }}
     # image: ${{ images.dify_api.ref }}
     preset: H100x1
-    # preset: gpu-small
+    # preset: cpu-large
     detach: true
     volumes:
       - ${{ volumes.data.ref_rw }}
@@ -207,3 +210,15 @@ jobs:
       cp -r ${{ volumes.nginx_cfg.mount }}/* /etc/nginx/
       envsubst '$DIFY_API_HOST $DIFY_WEB_HOST' < ${{ volumes.nginx_cfg.mount }}/conf.d/default.conf > /etc/nginx/conf.d/default.conf
       nginx -g 'daemon off;'
+  vllm:
+    image: vllm/vllm-openai:v0.4.2
+    env:
+      HF_TOKEN: secret:HF_TOKEN
+    volumes:
+      - ${{volumes.cache.ref}}
+    params:
+      preset: H100x4
+    preset: ${{params.preset}}
+    http_port: 8000
+    life_span: 30d
+    cmd: --model meta-llama/Meta-Llama-3-70B-Instruct --tokenizer meta-llama/Meta-Llama-3-70B-Instruct --dtype=half --tensor-parallel-size=4
