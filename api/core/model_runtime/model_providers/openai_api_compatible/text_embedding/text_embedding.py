@@ -3,6 +3,7 @@ import time
 from decimal import Decimal
 from typing import Optional
 from urllib.parse import urljoin
+from botocore.client import logging
 
 import numpy as np
 import requests
@@ -107,6 +108,10 @@ class OAICompatEmbeddingModel(_CommonOAI_API_Compat, TextEmbeddingModel):
 
             # Extract embeddings and used tokens from the response
             embeddings_batch = [data['embedding'] for data in response_data['data']]
+            if any(embedding is None for batch in embeddings_batch for embedding in batch):
+                logging.warning(f"EMBEDDING FAILURE: payload={json.dumps(payload)}")
+            else:
+                logging.info(f"EMBEDDING SUCCESS: payload={json.dumps(payload)}")
             embedding_used_tokens = response_data['usage']['total_tokens']
 
             used_tokens += embedding_used_tokens
