@@ -19,4 +19,4 @@ jobs:
         with:
           token: ${{ secrets.AUTO_PR_PAT }}
           upstream-repository: https://github.com/langgenius/dify
-          upstream-tag: 'v\d+\.\d+\.\d+'
+          upstream-tag: '\d+\..*'
