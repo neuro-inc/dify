@@ -8,15 +8,9 @@ on:
 
 jobs:
   autoupdate:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          token: ${{ secrets.AUTO_PR_PAT }}
-
-      - uses: fopina/upstream-to-pr@v1
-        with:
-          token: ${{ secrets.AUTO_PR_PAT }}
-          upstream-repository: https://github.com/langgenius/dify
-          upstream-tag: '\d+\..*'
+    uses: neuro-inc/reuse/.github/workflows/auto-pr.yaml@MLO-10
+    with:
+      upstream_repository: https://github.com/langgenius/dify
+      upstream_tag_regex: '\d+\..*'
+    secrets:
+      personal_access_token: ${{ secrets.AUTO_PR_PAT }}
