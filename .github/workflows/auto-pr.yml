@@ -8,7 +8,7 @@ on:
 
 jobs:
   autoupdate:
-    uses: neuro-inc/reuse/.github/workflows/auto-pr.yaml@MLO-10
+    uses: neuro-inc/reuse/.github/workflows/auto-pr.yaml@master
     with:
       upstream_repository: https://github.com/langgenius/dify
       upstream_tag_regex: '\d+\..*'
