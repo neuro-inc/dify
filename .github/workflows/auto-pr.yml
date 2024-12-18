@@ -17,6 +17,6 @@ jobs:
 
       - uses: fopina/upstream-to-pr@v1
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.AUTO_PR_PAT }}
           upstream-repository: https://github.com/langgenius/dify
           upstream-tag: 'v\d+\.\d+\.\d+'
