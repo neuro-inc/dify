@@ -15,7 +15,7 @@ jobs:
       - uses: qoomon/actions--access-token@v3
         id: access-token
         with:
-          repository: https://github.com/langgenius/dify
+          repository: langgenius/dify
           permissions: |
             contents: read
     outputs:
