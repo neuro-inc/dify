@@ -7,10 +7,24 @@ on:
     inputs: {}
 
 jobs:
+  get_token:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    steps:
+      - uses: qoomon/actions--access-token@v3
+        id: access-token
+        with:
+          repository: https://github.com/langgenius/dify
+          permissions: |
+            contents: read
+    outputs:
+      access_token: ${{ steps.access-token.outputs.token }}
   autoupdate:
     uses: neuro-inc/reuse/.github/workflows/auto-pr.yaml@MLO-10
+    needs: get_token
     with:
       upstream_repository: https://github.com/langgenius/dify
       upstream_tag_regex: '\d+\..*'
     secrets:
-      personal_access_token: ${{ secrets.GH_AUTO_PR }}
+      personal_access_token: ${{ needs.get_token.outputs.access_token }}
