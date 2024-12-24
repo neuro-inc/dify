@@ -13,4 +13,4 @@ jobs:
       upstream_repository: https://github.com/langgenius/dify
       upstream_tag_regex: '\d+\..*'
     secrets:
-      personal_access_token: ${{ secrets.AUTO_PR_PAT }}
+      personal_access_token: ${{ secrets.GH_AUTO_PR }}
