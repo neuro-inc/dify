@@ -5,18 +5,23 @@ from werkzeug.exceptions import Forbidden
 
 import services
 from configs import dify_config
-from controllers.console import api
-from controllers.console.datasets.error import (
+from constants import DOCUMENT_EXTENSIONS
+from controllers.common.errors import FilenameNotExistsError
+from controllers.console.wraps import (
+    account_initialization_required,
+    cloud_edition_billing_resource_check,
+    setup_required,
+)
+from fields.file_fields import file_fields, upload_config_fields
+from libs.login import login_required
+from services.file_service import FileService
+
+from .error import (
     FileTooLargeError,
     NoFileUploadedError,
     TooManyFilesError,
     UnsupportedFileTypeError,
 )
-from controllers.console.setup import setup_required
-from controllers.console.wraps import account_initialization_required, cloud_edition_billing_resource_check
-from fields.file_fields import file_fields, upload_config_fields
-from libs.login import login_required
-from services.file_service import ALLOWED_EXTENSIONS, UNSTRUCTURED_ALLOWED_EXTENSIONS, FileService
 
 PREVIEW_WORDS_LIMIT = 3000
 
@@ -27,13 +32,13 @@ class FileApi(Resource):
     @account_initialization_required
     @marshal_with(upload_config_fields)
     def get(self):
-        file_size_limit = dify_config.UPLOAD_FILE_SIZE_LIMIT
-        batch_count_limit = dify_config.UPLOAD_FILE_BATCH_LIMIT
-        image_file_size_limit = dify_config.UPLOAD_IMAGE_FILE_SIZE_LIMIT
         return {
-            "file_size_limit": file_size_limit,
-            "batch_count_limit": batch_count_limit,
-            "image_file_size_limit": image_file_size_limit,
+            "file_size_limit": dify_config.UPLOAD_FILE_SIZE_LIMIT,
+            "batch_count_limit": dify_config.UPLOAD_FILE_BATCH_LIMIT,
+            "image_file_size_limit": dify_config.UPLOAD_IMAGE_FILE_SIZE_LIMIT,
+            "video_file_size_limit": dify_config.UPLOAD_VIDEO_FILE_SIZE_LIMIT,
+            "audio_file_size_limit": dify_config.UPLOAD_AUDIO_FILE_SIZE_LIMIT,
+            "workflow_file_upload_limit": dify_config.WORKFLOW_FILE_UPLOAD_LIMIT,
         }, 200
 
     @setup_required
@@ -42,20 +47,32 @@ class FileApi(Resource):
     @marshal_with(file_fields)
     @cloud_edition_billing_resource_check("documents")
     def post(self):
-        if not current_user.is_dataset_editor:
-            raise Forbidden()
-        
-        # get file from request
         file = request.files["file"]
+        source = request.form.get("source")
 
-        # check file
         if "file" not in request.files:
             raise NoFileUploadedError()
 
         if len(request.files) > 1:
             raise TooManyFilesError()
+
+        if not file.filename:
+            raise FilenameNotExistsError
+
+        if source == "datasets" and not current_user.is_dataset_editor:
+            raise Forbidden()
+
+        if source not in {"datasets", None}:
+            source = None
+
         try:
-            upload_file = FileService.upload_file(file, current_user)
+            upload_file = FileService.upload_file(
+                filename=file.filename,
+                content=file.read(),
+                mimetype=file.mimetype,
+                user=current_user,
+                source=source,
+            )
         except services.errors.file.FileTooLargeError as file_too_large_error:
             raise FileTooLargeError(file_too_large_error.description)
         except services.errors.file.UnsupportedFileTypeError:
@@ -79,11 +96,4 @@ class FileSupportTypeApi(Resource):
     @login_required
     @account_initialization_required
     def get(self):
-        etl_type = dify_config.ETL_TYPE
-        allowed_extensions = UNSTRUCTURED_ALLOWED_EXTENSIONS if etl_type == "Unstructured" else ALLOWED_EXTENSIONS
-        return {"allowed_extensions": allowed_extensions}
-
-
-api.add_resource(FileApi, "/files/upload")
-api.add_resource(FilePreviewApi, "/files/<uuid:file_id>/preview")
-api.add_resource(FileSupportTypeApi, "/files/support-type")
+        return {"allowed_extensions": DOCUMENT_EXTENSIONS}
